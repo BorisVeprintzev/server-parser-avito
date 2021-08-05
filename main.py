@@ -1,4 +1,6 @@
-from flask import Flask, jsonify, request, make_response, abort
+import json
+import requests
+from flask import Flask, request, make_response, abort
 from src.parserAvito import AvitoParser
 
 app = Flask(__name__)
@@ -21,11 +23,17 @@ def read_request():
     except (ValueError, KeyError, TypeError):
         product['callback'] = request.remote_addr
     parser_obj = AvitoParser()
-    print(product)
-    answer = parser_obj.get_blocks(product.get('name'))
-    print(product)
-    return "load\n", 201
+    objects = parser_obj.parse(product.get('name'))
+    print(objects)
+    my_json = {
+        "search": product.get('name'),
+        "result": [x.to_json() for x in objects]}
+    # print(my_json["result"])
+    if product['callback'] is not request.remote_addr:
+        r = requests.get(product['callback'], params=json.dumps(my_json))
+        return r.status_code, 201
+    return json.dumps(my_json), 201
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()
